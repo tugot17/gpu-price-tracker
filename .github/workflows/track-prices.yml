@@ -12,6 +12,7 @@ jobs:
 
     permissions:
       contents: write # Allow pushing to repo
+      actions: write # Allow triggering other workflows
 
     steps:
       - name: Checkout repository
