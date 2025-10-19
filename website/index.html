@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU Price Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ GPU Price Tracker</h1>
+            <p class="subtitle">Real-time datacenter GPU pricing from Prime Intellect's aggregated marketplace</p>
+            <p class="last-updated">Last updated: <span id="lastUpdated">Loading...</span></p>
+        </header>
+
+        <!-- GPU Type Selector -->
+        <div class="gpu-selector">
+            <button class="gpu-btn active" data-gpu="H100_80GB_SXM5">H100 SXM5</button>
+            <button class="gpu-btn" data-gpu="H100_80GB_PCIe">H100 PCIe</button>
+            <button class="gpu-btn" data-gpu="A100_80GB_SXM4">A100 SXM4</button>
+            <button class="gpu-btn" data-gpu="A100_80GB_PCIe">A100 PCIe</button>
+            <button class="gpu-btn" data-gpu="H200_141GB">H200 141GB</button>
+            <button class="gpu-btn" data-gpu="B200_180GB">B200 180GB</button>
+            <button class="gpu-btn" data-gpu="GH200_96GB">GH200 96GB</button>
+        </div>
+
+        <!-- Current Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Minimum Price</h3>
+                <p class="stat-value" id="minPrice">-</p>
+                <p class="stat-label">per GPU/hour</p>
+            </div>
+            <div class="stat-card">
+                <h3>Median Price</h3>
+                <p class="stat-value" id="medianPrice">-</p>
+                <p class="stat-label">per GPU/hour</p>
+            </div>
+            <div class="stat-card">
+                <h3>Available</h3>
+                <p class="stat-value" id="available">-</p>
+                <p class="stat-label">configurations</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Configs</h3>
+                <p class="stat-value" id="totalConfigs">-</p>
+                <p class="stat-label">in market</p>
+            </div>
+        </div>
+
+        <!-- Price Trend Chart -->
+        <div class="chart-container">
+            <h2>Price Trend (Last 7 Days)</h2>
+            <div class="chart-wrapper">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Best Deals Table -->
+        <div class="table-container">
+            <h2>Best Deals by Configuration</h2>
+            <table id="bestDealsTable">
+                <thead>
+                    <tr>
+                        <th>GPUs</th>
+                        <th>Price/GPU</th>
+                        <th>Total Price</th>
+                        <th>Provider</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody id="bestDealsBody">
+                    <tr>
+                        <td colspan="6" class="loading">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Provider Breakdown -->
+        <div class="table-container">
+            <h2>By Provider</h2>
+            <table id="providerTable">
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <th>Configs</th>
+                        <th>Min Price</th>
+                        <th>Avg Price</th>
+                    </tr>
+                </thead>
+                <tbody id="providerBody">
+                    <tr>
+                        <td colspan="4" class="loading">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>Data sourced from <a href="https://primeintellect.ai" target="_blank">Prime Intellect</a> |
+               <a href="https://github.com/YOUR_USERNAME/gpu-price-tracker" target="_blank">View on GitHub</a> |
+               Updated every 4 hours</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

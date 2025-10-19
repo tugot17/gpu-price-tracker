@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system prime
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile track_prices_efficient.py
+          python3 -m py_compile view_prices.py
+
+      - name: Check for large files
+        run: |
+          echo "Checking for files larger than 1MB..."
+          if find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*" | grep -q .; then
+            echo "❌ Large files detected:"
+            find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*"
+            exit 1
+          fi
+          echo "✅ No large files found"
+
+      - name: Check for debug artifacts
+        run: |
+          echo "Checking for debug statements..."
+          if git grep -E "import pdb|breakpoint\(\)|console\.log|debugger" -- "*.py" "*.js" || true | grep -q .; then
+            echo "⚠️  Debug statements found"
+            git grep -E "import pdb|breakpoint\(\)|console\.log|debugger" -- "*.py" "*.js" || true
+            exit 1
+          fi
+          echo "✅ No debug artifacts"
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating JSON files..."
+          for file in $(find . -name "*.json" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*"); do
+            echo "  Checking $file"
+            python3 -c "import json; json.load(open('$file'))" || exit 1
+          done
+          echo "✅ All JSON files valid"
+
+      - name: Validate JSONL files
+        run: |
+          echo "Validating JSONL files..."
+          for file in $(find data/summary -name "*.jsonl" 2>/dev/null || true); do
+            if [ -f "$file" ]; then
+              echo "  Checking $file"
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "$line" | python3 -c "import sys, json; json.loads(sys.stdin.read())" || exit 1
+                fi
+              done < "$file"
+            fi
+          done
+          echo "✅ All JSONL files valid"
+
+      - name: Test scripts can import dependencies
+        run: |
+          python3 -c "from prime_cli.api import APIClient; from prime_cli.api.availability import AvailabilityClient; print('✅ Imports successful')"
+
+      - name: Run pre-commit checks
+        run: |
+          echo "Running all pre-commit checks..."
+          if [ -f .git/hooks/pre-commit ]; then
+            bash .git/hooks/pre-commit || exit 1
+          else
+            echo "ℹ️  No pre-commit hook found, skipping"
+          fi

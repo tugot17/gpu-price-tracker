@@ -1,0 +1,60 @@
+name: Track GPU Prices
+
+on:
+  schedule:
+    # Run every 4 hours at :05 past the hour
+    - cron: '5 */4 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  track-prices:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Allow pushing to repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for commits
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system prime
+
+      - name: Run price tracker
+        env:
+          PRIME_API_KEY: ${{ secrets.PRIME_API_KEY }}
+        run: |
+          python track_prices_efficient.py
+
+      - name: Commit and push data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Add only tracked data files
+          git add data/summary/*.jsonl data/daily_deals/*.json
+
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            # Get timestamp for commit message
+            timestamp=$(date -u +"%Y-%m-%d %H:%M UTC")
+
+            # Commit with timestamp
+            git commit -m "Update GPU prices - ${timestamp}"
+
+            # Push changes
+            git push
+          fi

@@ -1,0 +1,9 @@
+[project]
+name = "gpu-price-tracker"
+version = "0.1.0"
+description = "Track datacenter GPU pricing from Prime Intellect's aggregated marketplace"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "prime>=0.4.0",
+]
