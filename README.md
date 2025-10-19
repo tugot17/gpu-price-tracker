@@ -1,8 +1,14 @@
 # GPU Price Tracker
 
+[![CI](https://github.com/tugot17/gpu-price-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/tugot17/gpu-price-tracker/actions/workflows/ci.yml)
+
 Tracks GPU prices from Prime Intellect's marketplace. Runs every 4 hours and stores pricing history for datacenter GPUs like H100, H200, B200, and A100.
 
-Live dashboard shows price trends, best deals, and provider comparisons.
+## Live Dashboard
+
+🌐 **[View Live Dashboard](https://tugot17.github.io/gpu-price-tracker/website/)**
+
+The dashboard shows price trends, best deals, and provider comparisons updated every 4 hours.
 
 ## Setup
 
