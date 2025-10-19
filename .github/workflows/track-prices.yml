@@ -43,7 +43,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
 
           # Add only tracked data files
-          git add data/summary/*.jsonl data/daily_deals/*.json
+          git add data/summary/*.jsonl
 
           # Check if there are changes
           if git diff --staged --quiet; then
