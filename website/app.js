@@ -406,7 +406,7 @@ function updateChart(data) {
                             size: 12
                         },
                         callback: function(value) {
-                            return '$' + value;
+                            return '$' + value.toFixed(2);
                         }
                     }
                 }
@@ -505,8 +505,8 @@ function updateProviderTable(data) {
         <tr>
             <td>${name}</td>
             <td>${stats.count}</td>
-            <td>$${stats.min}</td>
-            <td>$${stats.avg}</td>
+            <td>$${stats.min.toFixed(2)}</td>
+            <td>$${stats.avg.toFixed(2)}</td>
         </tr>
     `).join('');
 
