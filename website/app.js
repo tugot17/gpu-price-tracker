@@ -39,6 +39,11 @@ function initializeDarkMode() {
             priceChart.options.scales.x.ticks.color = colors.text;
             priceChart.options.scales.y.grid.color = colors.grid;
             priceChart.options.scales.y.ticks.color = colors.text;
+            priceChart.options.plugins.legend.labels.color = colors.text;
+            priceChart.options.plugins.tooltip.backgroundColor = colors.tooltipBg;
+            priceChart.options.plugins.tooltip.titleColor = colors.tooltipTitle;
+            priceChart.options.plugins.tooltip.bodyColor = colors.tooltipBody;
+            priceChart.options.plugins.tooltip.borderColor = colors.tooltipBorder;
             priceChart.update();
         }
     });
@@ -92,9 +97,14 @@ function initializeSmoothToggle() {
 // Get theme-appropriate colors for chart from CSS variables
 function getChartColors() {
     const styles = getComputedStyle(document.documentElement);
+    const isDark = document.documentElement.classList.contains('dark-mode');
     return {
         grid: styles.getPropertyValue('--border').trim(),
-        text: styles.getPropertyValue('--text-secondary').trim()
+        text: styles.getPropertyValue('--text-secondary').trim(),
+        tooltipBg: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        tooltipTitle: styles.getPropertyValue('--text-primary').trim(),
+        tooltipBody: styles.getPropertyValue('--text-secondary').trim(),
+        tooltipBorder: styles.getPropertyValue('--border').trim()
     };
 }
 
@@ -292,12 +302,18 @@ function updateChart(data) {
     // Cache processed data for click handling
     processedChartData = processedData;
 
-    // Destroy existing chart
+    // Update existing chart or create new one
     if (priceChart) {
-        priceChart.destroy();
+        // Update data efficiently without destroying
+        priceChart.data.labels = labels;
+        priceChart.data.datasets[0].data = minPrices;
+        priceChart.data.datasets[1].data = medianPrices;
+        priceChart.data.datasets[2].data = maxPrices;
+        priceChart.update();
+        return;
     }
 
-    // Create new chart
+    // Create new chart only on first load
     const ctx = document.getElementById('priceChart').getContext('2d');
     priceChart = new Chart(ctx, {
         type: 'line',
@@ -339,7 +355,7 @@ function updateChart(data) {
             plugins: {
                 legend: {
                     labels: {
-                        color: '#191919',
+                        color: getChartColors().text,
                         font: {
                             size: 13,
                             weight: 500
@@ -350,10 +366,10 @@ function updateChart(data) {
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    titleColor: '#191919',
-                    bodyColor: '#666666',
-                    borderColor: '#E6E6E6',
+                    backgroundColor: getChartColors().tooltipBg,
+                    titleColor: getChartColors().tooltipTitle,
+                    bodyColor: getChartColors().tooltipBody,
+                    borderColor: getChartColors().tooltipBorder,
                     borderWidth: 1,
                     padding: 12,
                     callbacks: {
