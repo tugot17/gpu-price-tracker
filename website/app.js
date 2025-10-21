@@ -73,7 +73,6 @@ function updateStats(data) {
     document.getElementById('minPrice').textContent = `$${latest.price_stats.min}`;
     document.getElementById('medianPrice').textContent = `$${latest.price_stats.median}`;
     document.getElementById('available').textContent = latest.availability.available;
-    document.getElementById('totalConfigs').textContent = latest.availability.total;
 }
 
 function updateChart(data) {
@@ -115,27 +114,27 @@ function updateChart(data) {
                 {
                     label: 'Min Price',
                     data: minPrices,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#059669',
+                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                    borderWidth: 2.5,
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Median Price',
                     data: medianPrices,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#FF6719',
+                    backgroundColor: 'rgba(255, 103, 25, 0.1)',
+                    borderWidth: 2.5,
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Max Price',
                     data: maxPrices,
-                    borderColor: '#ef4444',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#DC2626',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    borderWidth: 2.5,
                     tension: 0.4,
                     fill: false
                 }
@@ -147,12 +146,23 @@ function updateChart(data) {
             plugins: {
                 legend: {
                     labels: {
-                        color: '#f1f5f9'
+                        color: '#191919',
+                        font: {
+                            size: 13,
+                            weight: 500
+                        },
+                        padding: 15
                     }
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#191919',
+                    bodyColor: '#666666',
+                    borderColor: '#E6E6E6',
+                    borderWidth: 1,
+                    padding: 12,
                     callbacks: {
                         label: function(context) {
                             return `${context.dataset.label}: $${context.parsed.y}/GPU`;
@@ -163,18 +173,26 @@ function updateChart(data) {
             scales: {
                 x: {
                     grid: {
-                        color: '#334155'
+                        color: '#E6E6E6',
+                        drawBorder: false
                     },
                     ticks: {
-                        color: '#94a3b8'
+                        color: '#666666',
+                        font: {
+                            size: 12
+                        }
                     }
                 },
                 y: {
                     grid: {
-                        color: '#334155'
+                        color: '#E6E6E6',
+                        drawBorder: false
                     },
                     ticks: {
-                        color: '#94a3b8',
+                        color: '#666666',
+                        font: {
+                            size: 12
+                        },
                         callback: function(value) {
                             return '$' + value;
                         }
