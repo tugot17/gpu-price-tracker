@@ -1,23 +1,22 @@
-# GPU Price Tracker
+# Compute Price Tracker
 
 [![CI](https://github.com/tugot17/gpu-price-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/tugot17/gpu-price-tracker/actions/workflows/ci.yml)
 
-Track NeoCloud GPU prices over time. Runs every 4 hours and stores pricing history for datacenter GPUs like H100, H200, B200, and A100.
+Providing transparency and open data for datacenter GPU compute markets. Built for [Tensor Economics](https://www.tensoreconomics.com/).
 
 ## Live Dashboard
 
 🌐 **[View Live Dashboard](https://tugot17.github.io/gpu-price-tracker/website/)**
 
-Track NeoCloud GPU prices over time with price trends, best deals, and provider comparisons updated every 4 hours.
+Price trends, best deals, and provider comparisons updated every 4 hours. Data sourced from [Prime Intellect](https://primeintellect.ai)'s aggregated marketplace.
 
 ## Setup
 
 ```bash
-# Install dependencies
-pip install prime
-
-# Or use uv if you prefer
+# Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
 uv sync
 
 # Login to Prime Intellect
@@ -108,25 +107,6 @@ Each line in `data/summary/*.jsonl`:
 }
 ```
 
-## Storage efficiency
-
-Running 6 times per day:
-- Raw data: ~161KB per snapshot = ~350MB/year
-- Aggregated stats: ~5KB per snapshot = ~11MB/year
-
-So we're 32x more efficient by storing only the stats we need.
-
-## GitHub Actions (optional)
-
-You can set this up to run automatically:
-
-1. Add `PRIME_API_KEY` to your repo secrets
-2. Enable GitHub Actions
-3. Enable GitHub Pages (to deploy the dashboard)
-
-See [SETUP.md](SETUP.md) for step-by-step instructions.
-
-The workflow runs every 4 hours and auto-deploys the dashboard.
 
 ## Files
 
@@ -142,24 +122,6 @@ data/
   └── full_snapshots/       # Raw data (git-ignored)
 ```
 
-## API usage
-
-The tracker uses Prime Intellect's Python SDK:
-
-```python
-from prime_cli.api import APIClient
-from prime_cli.api.availability import AvailabilityClient
-
-api_client = APIClient()
-availability_client = AvailabilityClient(api_client)
-
-# Get prices for H100
-data = availability_client.get(gpu_type="H100_80GB")
-
-for gpu_type, gpus in data.items():
-    for gpu in gpus:
-        print(f"{gpu.gpu_count}x {gpu.provider}: ${gpu.prices.price}/hr")
-```
 
 ## Example output
 
@@ -191,4 +153,4 @@ By Configuration:
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) file for details.
