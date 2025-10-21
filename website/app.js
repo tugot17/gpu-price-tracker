@@ -1,11 +1,16 @@
 // Configuration
 const DATA_BASE_URL = '../data'; // Adjust for GitHub Pages
 let currentGPU = 'H100_80GB_SXM5';
+let currentTimeRange = 7; // days
+let smoothEnabled = false;
 let priceChart = null;
+let allData = null; // Cache all data
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializeGPUButtons();
+    initializeTimeRangeButtons();
+    initializeSmoothToggle();
     loadGPUData(currentGPU);
 });
 
@@ -24,10 +29,43 @@ function initializeGPUButtons() {
     });
 }
 
+function initializeTimeRangeButtons() {
+    const buttons = document.querySelectorAll('.time-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update time range
+            const days = btn.dataset.days;
+            currentTimeRange = days === 'all' ? 'all' : parseInt(days);
+
+            // Update chart with new time range
+            if (allData) {
+                updateChart(allData);
+            }
+        });
+    });
+}
+
+function initializeSmoothToggle() {
+    const toggle = document.getElementById('smoothToggle');
+    toggle.addEventListener('change', (e) => {
+        smoothEnabled = e.target.checked;
+        if (allData) {
+            updateChart(allData);
+        }
+    });
+}
+
 async function loadGPUData(gpuType) {
     try {
         // Load summary data
         const summaryData = await loadSummaryData(gpuType);
+
+        // Cache all data
+        allData = summaryData;
 
         // Update UI
         updateStats(summaryData);
@@ -75,29 +113,131 @@ function updateStats(data) {
     document.getElementById('available').textContent = latest.availability.available;
 }
 
+// Helper: Aggregate data by period (day or week)
+function aggregateData(data, period) {
+    const grouped = {};
+
+    data.forEach(d => {
+        const date = new Date(d.timestamp);
+        let key;
+
+        if (period === 'day') {
+            // Group by calendar day
+            key = date.toISOString().split('T')[0];
+        } else if (period === 'week') {
+            // Group by week (Monday as start of week)
+            const weekStart = new Date(date);
+            const day = weekStart.getDay();
+            const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+            weekStart.setDate(diff);
+            key = weekStart.toISOString().split('T')[0];
+        }
+
+        if (!grouped[key]) {
+            grouped[key] = [];
+        }
+        grouped[key].push(d);
+    });
+
+    // Calculate averages for each period
+    return Object.keys(grouped).sort().map(key => {
+        const items = grouped[key];
+        const avgMin = items.reduce((sum, d) => sum + d.price_stats.min, 0) / items.length;
+        const avgMedian = items.reduce((sum, d) => sum + d.price_stats.median, 0) / items.length;
+        const avgMax = items.reduce((sum, d) => sum + d.price_stats.max, 0) / items.length;
+
+        return {
+            timestamp: items[0].timestamp, // Use first timestamp in period
+            price_stats: {
+                min: avgMin,
+                median: avgMedian,
+                max: avgMax
+            }
+        };
+    });
+}
+
+// Helper: Apply EMA smoothing
+function applyEMA(data, alpha = 0.2) {
+    if (data.length === 0) return data;
+
+    const smoothed = [data[0]];
+
+    for (let i = 1; i < data.length; i++) {
+        smoothed.push({
+            timestamp: data[i].timestamp,
+            price_stats: {
+                min: alpha * data[i].price_stats.min + (1 - alpha) * smoothed[i-1].price_stats.min,
+                median: alpha * data[i].price_stats.median + (1 - alpha) * smoothed[i-1].price_stats.median,
+                max: alpha * data[i].price_stats.max + (1 - alpha) * smoothed[i-1].price_stats.max
+            }
+        });
+    }
+
+    return smoothed;
+}
+
 function updateChart(data) {
     if (!data || data.length === 0) {
         return;
     }
 
-    // Get last 7 days of data
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Filter data based on time range
+    let filteredData;
+    if (currentTimeRange === 'all') {
+        filteredData = data;
+    } else {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - currentTimeRange);
+        filteredData = data.filter(d => {
+            const date = new Date(d.timestamp);
+            return date >= cutoffDate;
+        });
+    }
 
-    const recentData = data.filter(d => {
+    // Apply aggregation for longer periods (reduces noise)
+    let processedData = filteredData;
+    if (currentTimeRange === 14) {
+        // 14 days: aggregate by day
+        processedData = aggregateData(filteredData, 'day');
+    } else if (currentTimeRange === 30) {
+        // 30 days: aggregate by day
+        processedData = aggregateData(filteredData, 'day');
+    } else if (currentTimeRange === 'all') {
+        // All: aggregate by week
+        processedData = aggregateData(filteredData, 'week');
+    }
+
+    // Apply EMA smoothing if enabled
+    if (smoothEnabled) {
+        processedData = applyEMA(processedData, 0.3);
+    }
+
+    // Smart date formatting based on time range
+    const labels = processedData.map(d => {
         const date = new Date(d.timestamp);
-        return date >= sevenDaysAgo;
+
+        // For 24h: show time only
+        if (currentTimeRange === 1) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+        // For 3-7 days: show date and time
+        else if (currentTimeRange <= 7) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' });
+        }
+        // For 14-30 days: show date only
+        else if (currentTimeRange <= 30) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+        // For longer periods: show month and year
+        else {
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
     });
 
-    // Prepare chart data
-    const labels = recentData.map(d => {
-        const date = new Date(d.timestamp);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' });
-    });
-
-    const minPrices = recentData.map(d => d.price_stats.min);
-    const medianPrices = recentData.map(d => d.price_stats.median);
-    const maxPrices = recentData.map(d => d.price_stats.max);
+    const minPrices = processedData.map(d => d.price_stats.min);
+    const medianPrices = processedData.map(d => d.price_stats.median);
+    const maxPrices = processedData.map(d => d.price_stats.max);
 
     // Destroy existing chart
     if (priceChart) {

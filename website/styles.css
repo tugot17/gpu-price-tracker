@@ -143,11 +143,79 @@ header h1 {
     margin-bottom: 3rem;
 }
 
-.chart-container h2 {
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.chart-container h2 {
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--text-primary);
+    margin: 0;
+}
+
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.time-range-selector {
+    display: flex;
+    gap: 0.375rem;
+    background: var(--bg-secondary);
+    padding: 0.25rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.smooth-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.smooth-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.smooth-toggle:hover {
+    color: var(--text-primary);
+}
+
+.time-btn {
+    padding: 0.375rem 0.75rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.time-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 103, 25, 0.1);
+}
+
+.time-btn.active {
+    background: var(--primary);
+    color: white;
 }
 
 .chart-wrapper {
