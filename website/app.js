@@ -9,11 +9,40 @@ let processedChartData = null; // Cache processed data for chart
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    initializeDarkMode();
     initializeGPUButtons();
     initializeTimeRangeButtons();
     initializeSmoothToggle();
     loadGPUData(currentGPU);
 });
+
+function initializeDarkMode() {
+    const toggle = document.getElementById('darkModeToggle');
+    const themeIcon = toggle.querySelector('.theme-icon');
+
+    // Check current theme (already applied by inline script)
+    const isDark = document.documentElement.classList.contains('dark-mode');
+
+    // Set initial icon based on current theme
+    themeIcon.textContent = isDark ? '☀️' : '🌙';
+
+    // Toggle on click
+    toggle.addEventListener('click', () => {
+        const willBeDark = document.documentElement.classList.toggle('dark-mode');
+        themeIcon.textContent = willBeDark ? '☀️' : '🌙';
+        localStorage.setItem('theme', willBeDark ? 'dark' : 'light');
+
+        // Update chart colors
+        if (priceChart) {
+            const colors = getChartColors();
+            priceChart.options.scales.x.grid.color = colors.grid;
+            priceChart.options.scales.x.ticks.color = colors.text;
+            priceChart.options.scales.y.grid.color = colors.grid;
+            priceChart.options.scales.y.ticks.color = colors.text;
+            priceChart.update();
+        }
+    });
+}
 
 function initializeGPUButtons() {
     const buttons = document.querySelectorAll('.gpu-btn');
@@ -58,6 +87,15 @@ function initializeSmoothToggle() {
             updateChart(allData);
         }
     });
+}
+
+// Get theme-appropriate colors for chart from CSS variables
+function getChartColors() {
+    const styles = getComputedStyle(document.documentElement);
+    return {
+        grid: styles.getPropertyValue('--border').trim(),
+        text: styles.getPropertyValue('--text-secondary').trim()
+    };
 }
 
 async function loadGPUData(gpuType) {
@@ -328,11 +366,11 @@ function updateChart(data) {
             scales: {
                 x: {
                     grid: {
-                        color: '#E6E6E6',
+                        color: getChartColors().grid,
                         drawBorder: false
                     },
                     ticks: {
-                        color: '#666666',
+                        color: getChartColors().text,
                         font: {
                             size: 12
                         }
@@ -340,11 +378,11 @@ function updateChart(data) {
                 },
                 y: {
                     grid: {
-                        color: '#E6E6E6',
+                        color: getChartColors().grid,
                         drawBorder: false
                     },
                     ticks: {
-                        color: '#666666',
+                        color: getChartColors().text,
                         font: {
                             size: 12
                         },
