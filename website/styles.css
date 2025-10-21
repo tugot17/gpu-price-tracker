@@ -13,6 +13,23 @@
     --chart-green: #10b981;
 }
 
+/* Dark mode variables */
+html.dark-mode,
+html.dark-mode body {
+    --primary: #FF6719;
+    --primary-hover: #E55A15;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --bg: #0f172a;
+    --bg-secondary: #1e293b;
+    --border: #334155;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --chart-blue: #3b82f6;
+    --chart-red: #ef4444;
+    --chart-green: #10b981;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -24,6 +41,7 @@ body {
     background: var(--bg);
     color: var(--text-primary);
     line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -33,10 +51,21 @@ body {
 }
 
 header {
-    text-align: center;
     margin-bottom: 3rem;
     padding-bottom: 2rem;
     border-bottom: 1px solid var(--border);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+}
+
+.header-content > div {
+    flex: 1;
+    text-align: center;
 }
 
 header h1 {
@@ -46,6 +75,31 @@ header h1 {
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.02em;
+}
+
+.theme-toggle {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+    background: var(--bg);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.theme-icon {
+    font-size: 1.25rem;
+    line-height: 1;
 }
 
 .subtitle {
@@ -129,6 +183,10 @@ header h1 {
     transition: all 0.2s ease;
 }
 
+.stat-card[title] {
+    cursor: help;
+}
+
 .stat-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -201,7 +259,7 @@ header h1 {
     gap: 0.5rem;
     font-size: 0.875rem;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: help;
     user-select: none;
 }
 
@@ -222,7 +280,7 @@ header h1 {
     border: none;
     color: var(--text-secondary);
     border-radius: 4px;
-    cursor: pointer;
+    cursor: help;
     font-size: 0.875rem;
     font-weight: 500;
     transition: all 0.2s ease;
@@ -341,6 +399,25 @@ footer a:hover {
 @media (max-width: 768px) {
     .container {
         padding: 2rem 1rem;
+    }
+
+    .header-content {
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .header-content > div {
+        text-align: left;
+    }
+
+    .theme-toggle {
+        width: 40px;
+        height: 40px;
+        margin-top: 0.25rem;
+    }
+
+    .theme-icon {
+        font-size: 1.1rem;
     }
 
     header h1 {

@@ -152,7 +152,7 @@ function updateStats(data, datapoint = null) {
 
     // Only show availability if it exists (may not exist in aggregated data)
     if (snapshot.availability) {
-        document.getElementById('available').textContent = snapshot.availability.available;
+        document.getElementById('available').textContent = snapshot.availability.total;
     }
 }
 
