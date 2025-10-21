@@ -1,6 +1,7 @@
 # Compute Price Tracker
 
 [![CI](https://github.com/tugot17/gpu-price-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/tugot17/gpu-price-tracker/actions/workflows/ci.yml)
+[![Website](https://img.shields.io/badge/website-live-brightgreen)](https://tugot17.github.io/gpu-price-tracker/website/)
 
 Providing transparency and open data for datacenter GPU compute markets. Built for [Tensor Economics](https://www.tensoreconomics.com/).
 
