@@ -6,7 +6,6 @@ let smoothEnabled = false;
 let priceChart = null;
 let allData = null; // Cache all data
 let processedChartData = null; // Cache processed data for chart
-let selectedDatapointIndex = null; // Track selected datapoint
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -68,9 +67,6 @@ async function loadGPUData(gpuType) {
 
         // Cache all data
         allData = summaryData;
-
-        // Reset to latest datapoint
-        selectedDatapointIndex = null;
 
         // Update UI
         updateStats(summaryData);
@@ -173,10 +169,11 @@ function aggregateData(data, period) {
 }
 
 // Helper: Apply EMA smoothing
-function applyEMA(data, alpha = 0.2) {
+function applyEMA(data, alpha = 0.3) {
     if (data.length === 0) return data;
 
-    const smoothed = [data[0]];
+    // Preserve original data reference for first element
+    const smoothed = [{...data[0]}];
 
     for (let i = 1; i < data.length; i++) {
         smoothed.push({
@@ -185,7 +182,10 @@ function applyEMA(data, alpha = 0.2) {
                 min: alpha * data[i].price_stats.min + (1 - alpha) * smoothed[i-1].price_stats.min,
                 median: alpha * data[i].price_stats.median + (1 - alpha) * smoothed[i-1].price_stats.median,
                 max: alpha * data[i].price_stats.max + (1 - alpha) * smoothed[i-1].price_stats.max
-            }
+            },
+            // Preserve original data reference if it exists
+            originalData: data[i].originalData || data[i],
+            isAggregated: data[i].isAggregated
         });
     }
 
@@ -212,11 +212,8 @@ function updateChart(data) {
 
     // Apply aggregation for longer periods (reduces noise)
     let processedData = filteredData;
-    if (currentTimeRange === 14) {
-        // 14 days: aggregate by day
-        processedData = aggregateData(filteredData, 'day');
-    } else if (currentTimeRange === 30) {
-        // 30 days: aggregate by day
+    if (currentTimeRange === 14 || currentTimeRange === 30) {
+        // 14-30 days: aggregate by day
         processedData = aggregateData(filteredData, 'day');
     } else if (currentTimeRange === 'all') {
         // All: aggregate by week
@@ -358,9 +355,8 @@ function updateChart(data) {
                 }
             },
             onClick: (_event, activeElements) => {
-                if (activeElements.length > 0) {
+                if (activeElements.length > 0 && processedChartData) {
                     const dataIndex = activeElements[0].index;
-                    selectedDatapointIndex = dataIndex;
 
                     // Get the selected datapoint
                     const selectedData = processedChartData[dataIndex];
