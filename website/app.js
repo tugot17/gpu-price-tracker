@@ -5,6 +5,8 @@ let currentTimeRange = 7; // days
 let smoothEnabled = false;
 let priceChart = null;
 let allData = null; // Cache all data
+let processedChartData = null; // Cache processed data for chart
+let selectedDatapointIndex = null; // Track selected datapoint
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -67,6 +69,9 @@ async function loadGPUData(gpuType) {
         // Cache all data
         allData = summaryData;
 
+        // Reset to latest datapoint
+        selectedDatapointIndex = null;
+
         // Update UI
         updateStats(summaryData);
         updateChart(summaryData);
@@ -95,22 +100,26 @@ async function loadSummaryData(gpuType) {
     return data;
 }
 
-function updateStats(data) {
+function updateStats(data, datapoint = null) {
     if (!data || data.length === 0) {
         return;
     }
 
-    // Get latest snapshot
-    const latest = data[data.length - 1];
+    // Use selected datapoint or latest snapshot
+    const snapshot = datapoint || data[data.length - 1];
 
     // Update timestamp
-    const timestamp = new Date(latest.timestamp);
+    const timestamp = new Date(snapshot.timestamp);
     document.getElementById('lastUpdated').textContent = timestamp.toLocaleString();
 
     // Update stats cards
-    document.getElementById('minPrice').textContent = `$${latest.price_stats.min}`;
-    document.getElementById('medianPrice').textContent = `$${latest.price_stats.median}`;
-    document.getElementById('available').textContent = latest.availability.available;
+    document.getElementById('minPrice').textContent = `$${snapshot.price_stats.min.toFixed(2)}`;
+    document.getElementById('medianPrice').textContent = `$${snapshot.price_stats.median.toFixed(2)}`;
+
+    // Only show availability if it exists (may not exist in aggregated data)
+    if (snapshot.availability) {
+        document.getElementById('available').textContent = snapshot.availability.available;
+    }
 }
 
 // Helper: Aggregate data by period (day or week)
@@ -146,13 +155,19 @@ function aggregateData(data, period) {
         const avgMedian = items.reduce((sum, d) => sum + d.price_stats.median, 0) / items.length;
         const avgMax = items.reduce((sum, d) => sum + d.price_stats.max, 0) / items.length;
 
+        // Use middle datapoint in period for timestamp and original data reference
+        const middleIndex = Math.floor(items.length / 2);
+        const middleItem = items[middleIndex];
+
         return {
-            timestamp: items[0].timestamp, // Use first timestamp in period
+            timestamp: middleItem.timestamp, // Use middle timestamp
             price_stats: {
                 min: avgMin,
                 median: avgMedian,
                 max: avgMax
-            }
+            },
+            originalData: middleItem, // Keep reference to original datapoint
+            isAggregated: true
         };
     });
 }
@@ -238,6 +253,9 @@ function updateChart(data) {
     const minPrices = processedData.map(d => d.price_stats.min);
     const medianPrices = processedData.map(d => d.price_stats.median);
     const maxPrices = processedData.map(d => d.price_stats.max);
+
+    // Cache processed data for click handling
+    processedChartData = processedData;
 
     // Destroy existing chart
     if (priceChart) {
@@ -336,6 +354,28 @@ function updateChart(data) {
                         callback: function(value) {
                             return '$' + value;
                         }
+                    }
+                }
+            },
+            onClick: (_event, activeElements) => {
+                if (activeElements.length > 0) {
+                    const dataIndex = activeElements[0].index;
+                    selectedDatapointIndex = dataIndex;
+
+                    // Get the selected datapoint
+                    const selectedData = processedChartData[dataIndex];
+
+                    // Update stats with selected datapoint
+                    // For aggregated data, use the original middle datapoint for full details
+                    const datapointToShow = selectedData.originalData || selectedData;
+                    updateStats(allData, datapointToShow);
+
+                    // Also update tables if they need specific datapoint
+                    if (datapointToShow.by_config) {
+                        updateBestDealsTable([datapointToShow]);
+                    }
+                    if (datapointToShow.by_provider) {
+                        updateProviderTable([datapointToShow]);
                     }
                 }
             }

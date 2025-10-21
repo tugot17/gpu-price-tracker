@@ -92,12 +92,32 @@ header h1 {
     color: white;
 }
 
+/* Stats Section */
+.stats-section {
+    margin-bottom: 3rem;
+}
+
+.stats-timestamp {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.stats-timestamp span {
+    font-weight: 600;
+    color: var(--primary);
+}
+
 /* Stats Grid */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.25rem;
-    margin-bottom: 3rem;
 }
 
 .stat-card {

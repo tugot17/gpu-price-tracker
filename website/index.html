@@ -12,7 +12,6 @@
         <header>
             <h1>Tensor Economics</h1>
             <p class="subtitle">GPU Price Tracker — Historical pricing data for datacenter GPUs</p>
-            <p class="last-updated">Last updated: <span id="lastUpdated">Loading...</span></p>
         </header>
 
         <!-- GPU Type Selector -->
@@ -27,21 +26,26 @@
         </div>
 
         <!-- Current Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Minimum Price</h3>
-                <p class="stat-value" id="minPrice">-</p>
-                <p class="stat-label">per GPU/hour</p>
+        <div class="stats-section">
+            <div class="stats-timestamp">
+                Showing data for: <span id="lastUpdated">Loading...</span>
             </div>
-            <div class="stat-card">
-                <h3>Median Price</h3>
-                <p class="stat-value" id="medianPrice">-</p>
-                <p class="stat-label">per GPU/hour</p>
-            </div>
-            <div class="stat-card">
-                <h3>Available</h3>
-                <p class="stat-value" id="available">-</p>
-                <p class="stat-label">configurations</p>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Minimum Price</h3>
+                    <p class="stat-value" id="minPrice">-</p>
+                    <p class="stat-label">per GPU/hour</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Median Price</h3>
+                    <p class="stat-value" id="medianPrice">-</p>
+                    <p class="stat-label">per GPU/hour</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Available</h3>
+                    <p class="stat-value" id="available">-</p>
+                    <p class="stat-label">configurations</p>
+                </div>
             </div>
         </div>
 
