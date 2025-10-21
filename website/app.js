@@ -323,27 +323,30 @@ function updateChart(data) {
                 {
                     label: 'Min Price',
                     data: minPrices,
-                    borderColor: '#059669',
-                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                    borderColor: '#0077BB',
+                    backgroundColor: 'rgba(0, 119, 187, 0.1)',
                     borderWidth: 2.5,
+                    borderDash: [],
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Median Price',
                     data: medianPrices,
-                    borderColor: '#FF6719',
-                    backgroundColor: 'rgba(255, 103, 25, 0.1)',
+                    borderColor: '#EE7733',
+                    backgroundColor: 'rgba(238, 119, 51, 0.1)',
                     borderWidth: 2.5,
+                    borderDash: [8, 4],
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Max Price',
                     data: maxPrices,
-                    borderColor: '#DC2626',
-                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    borderColor: '#CC3311',
+                    backgroundColor: 'rgba(204, 51, 17, 0.1)',
                     borderWidth: 2.5,
+                    borderDash: [2, 3],
                     tension: 0.4,
                     fill: false
                 }
