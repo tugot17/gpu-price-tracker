@@ -1,13 +1,53 @@
 // Configuration
 const DATA_BASE_URL = '../data'; // Adjust for GitHub Pages
 let currentGPU = 'H100_80GB_SXM5';
+let currentTimeRange = 7; // days
+let smoothEnabled = false;
 let priceChart = null;
+let allData = null; // Cache all data
+let processedChartData = null; // Cache processed data for chart
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    initializeDarkMode();
     initializeGPUButtons();
+    initializeTimeRangeButtons();
+    initializeSmoothToggle();
     loadGPUData(currentGPU);
 });
+
+function initializeDarkMode() {
+    const toggle = document.getElementById('darkModeToggle');
+    const themeIcon = toggle.querySelector('.theme-icon');
+
+    // Check current theme (already applied by inline script)
+    const isDark = document.documentElement.classList.contains('dark-mode');
+
+    // Set initial icon based on current theme
+    themeIcon.textContent = isDark ? '☀️' : '🌙';
+
+    // Toggle on click
+    toggle.addEventListener('click', () => {
+        const willBeDark = document.documentElement.classList.toggle('dark-mode');
+        themeIcon.textContent = willBeDark ? '☀️' : '🌙';
+        localStorage.setItem('theme', willBeDark ? 'dark' : 'light');
+
+        // Update chart colors
+        if (priceChart) {
+            const colors = getChartColors();
+            priceChart.options.scales.x.grid.color = colors.grid;
+            priceChart.options.scales.x.ticks.color = colors.text;
+            priceChart.options.scales.y.grid.color = colors.grid;
+            priceChart.options.scales.y.ticks.color = colors.text;
+            priceChart.options.plugins.legend.labels.color = colors.text;
+            priceChart.options.plugins.tooltip.backgroundColor = colors.tooltipBg;
+            priceChart.options.plugins.tooltip.titleColor = colors.tooltipTitle;
+            priceChart.options.plugins.tooltip.bodyColor = colors.tooltipBody;
+            priceChart.options.plugins.tooltip.borderColor = colors.tooltipBorder;
+            priceChart.update();
+        }
+    });
+}
 
 function initializeGPUButtons() {
     const buttons = document.querySelectorAll('.gpu-btn');
@@ -24,10 +64,57 @@ function initializeGPUButtons() {
     });
 }
 
+function initializeTimeRangeButtons() {
+    const buttons = document.querySelectorAll('.time-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update time range
+            const days = btn.dataset.days;
+            currentTimeRange = days === 'all' ? 'all' : parseInt(days);
+
+            // Update chart with new time range
+            if (allData) {
+                updateChart(allData);
+            }
+        });
+    });
+}
+
+function initializeSmoothToggle() {
+    const toggle = document.getElementById('smoothToggle');
+    toggle.addEventListener('change', (e) => {
+        smoothEnabled = e.target.checked;
+        if (allData) {
+            updateChart(allData);
+        }
+    });
+}
+
+// Get theme-appropriate colors for chart from CSS variables
+function getChartColors() {
+    const styles = getComputedStyle(document.documentElement);
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    return {
+        grid: styles.getPropertyValue('--border').trim(),
+        text: styles.getPropertyValue('--text-secondary').trim(),
+        tooltipBg: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        tooltipTitle: styles.getPropertyValue('--text-primary').trim(),
+        tooltipBody: styles.getPropertyValue('--text-secondary').trim(),
+        tooltipBorder: styles.getPropertyValue('--border').trim()
+    };
+}
+
 async function loadGPUData(gpuType) {
     try {
         // Load summary data
         const summaryData = await loadSummaryData(gpuType);
+
+        // Cache all data
+        allData = summaryData;
 
         // Update UI
         updateStats(summaryData);
@@ -57,23 +144,100 @@ async function loadSummaryData(gpuType) {
     return data;
 }
 
-function updateStats(data) {
+function updateStats(data, datapoint = null) {
     if (!data || data.length === 0) {
         return;
     }
 
-    // Get latest snapshot
-    const latest = data[data.length - 1];
+    // Use selected datapoint or latest snapshot
+    const snapshot = datapoint || data[data.length - 1];
 
     // Update timestamp
-    const timestamp = new Date(latest.timestamp);
+    const timestamp = new Date(snapshot.timestamp);
     document.getElementById('lastUpdated').textContent = timestamp.toLocaleString();
 
     // Update stats cards
-    document.getElementById('minPrice').textContent = `$${latest.price_stats.min}`;
-    document.getElementById('medianPrice').textContent = `$${latest.price_stats.median}`;
-    document.getElementById('available').textContent = latest.availability.available;
-    document.getElementById('totalConfigs').textContent = latest.availability.total;
+    document.getElementById('minPrice').textContent = `$${snapshot.price_stats.min.toFixed(2)}`;
+    document.getElementById('medianPrice').textContent = `$${snapshot.price_stats.median.toFixed(2)}`;
+
+    // Only show availability if it exists (may not exist in aggregated data)
+    if (snapshot.availability) {
+        document.getElementById('available').textContent = snapshot.availability.total;
+    }
+}
+
+// Helper: Aggregate data by period (day or week)
+function aggregateData(data, period) {
+    const grouped = {};
+
+    data.forEach(d => {
+        const date = new Date(d.timestamp);
+        let key;
+
+        if (period === 'day') {
+            // Group by calendar day
+            key = date.toISOString().split('T')[0];
+        } else if (period === 'week') {
+            // Group by week (Monday as start of week)
+            const weekStart = new Date(date);
+            const day = weekStart.getDay();
+            const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+            weekStart.setDate(diff);
+            key = weekStart.toISOString().split('T')[0];
+        }
+
+        if (!grouped[key]) {
+            grouped[key] = [];
+        }
+        grouped[key].push(d);
+    });
+
+    // Calculate averages for each period
+    return Object.keys(grouped).sort().map(key => {
+        const items = grouped[key];
+        const avgMin = items.reduce((sum, d) => sum + d.price_stats.min, 0) / items.length;
+        const avgMedian = items.reduce((sum, d) => sum + d.price_stats.median, 0) / items.length;
+        const avgMax = items.reduce((sum, d) => sum + d.price_stats.max, 0) / items.length;
+
+        // Use middle datapoint in period for timestamp and original data reference
+        const middleIndex = Math.floor(items.length / 2);
+        const middleItem = items[middleIndex];
+
+        return {
+            timestamp: middleItem.timestamp, // Use middle timestamp
+            price_stats: {
+                min: avgMin,
+                median: avgMedian,
+                max: avgMax
+            },
+            originalData: middleItem, // Keep reference to original datapoint
+            isAggregated: true
+        };
+    });
+}
+
+// Helper: Apply EMA smoothing
+function applyEMA(data, alpha = 0.3) {
+    if (data.length === 0) return data;
+
+    // Preserve original data reference for first element
+    const smoothed = [{...data[0]}];
+
+    for (let i = 1; i < data.length; i++) {
+        smoothed.push({
+            timestamp: data[i].timestamp,
+            price_stats: {
+                min: alpha * data[i].price_stats.min + (1 - alpha) * smoothed[i-1].price_stats.min,
+                median: alpha * data[i].price_stats.median + (1 - alpha) * smoothed[i-1].price_stats.median,
+                max: alpha * data[i].price_stats.max + (1 - alpha) * smoothed[i-1].price_stats.max
+            },
+            // Preserve original data reference if it exists
+            originalData: data[i].originalData || data[i],
+            isAggregated: data[i].isAggregated
+        });
+    }
+
+    return smoothed;
 }
 
 function updateChart(data) {
@@ -81,31 +245,75 @@ function updateChart(data) {
         return;
     }
 
-    // Get last 7 days of data
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const recentData = data.filter(d => {
-        const date = new Date(d.timestamp);
-        return date >= sevenDaysAgo;
-    });
-
-    // Prepare chart data
-    const labels = recentData.map(d => {
-        const date = new Date(d.timestamp);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' });
-    });
-
-    const minPrices = recentData.map(d => d.price_stats.min);
-    const medianPrices = recentData.map(d => d.price_stats.median);
-    const maxPrices = recentData.map(d => d.price_stats.max);
-
-    // Destroy existing chart
-    if (priceChart) {
-        priceChart.destroy();
+    // Filter data based on time range
+    let filteredData;
+    if (currentTimeRange === 'all') {
+        filteredData = data;
+    } else {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - currentTimeRange);
+        filteredData = data.filter(d => {
+            const date = new Date(d.timestamp);
+            return date >= cutoffDate;
+        });
     }
 
-    // Create new chart
+    // Apply aggregation for longer periods (reduces noise)
+    let processedData = filteredData;
+    if (currentTimeRange === 14 || currentTimeRange === 30) {
+        // 14-30 days: aggregate by day
+        processedData = aggregateData(filteredData, 'day');
+    } else if (currentTimeRange === 'all') {
+        // All: aggregate by week
+        processedData = aggregateData(filteredData, 'week');
+    }
+
+    // Apply EMA smoothing if enabled
+    if (smoothEnabled) {
+        processedData = applyEMA(processedData, 0.3);
+    }
+
+    // Smart date formatting based on time range
+    const labels = processedData.map(d => {
+        const date = new Date(d.timestamp);
+
+        // For 24h: show time only
+        if (currentTimeRange === 1) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+        // For 3-7 days: show date and time
+        else if (currentTimeRange <= 7) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' });
+        }
+        // For 14-30 days: show date only
+        else if (currentTimeRange <= 30) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+        // For longer periods: show month and year
+        else {
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+    });
+
+    const minPrices = processedData.map(d => d.price_stats.min);
+    const medianPrices = processedData.map(d => d.price_stats.median);
+    const maxPrices = processedData.map(d => d.price_stats.max);
+
+    // Cache processed data for click handling
+    processedChartData = processedData;
+
+    // Update existing chart or create new one
+    if (priceChart) {
+        // Update data efficiently without destroying
+        priceChart.data.labels = labels;
+        priceChart.data.datasets[0].data = minPrices;
+        priceChart.data.datasets[1].data = medianPrices;
+        priceChart.data.datasets[2].data = maxPrices;
+        priceChart.update();
+        return;
+    }
+
+    // Create new chart only on first load
     const ctx = document.getElementById('priceChart').getContext('2d');
     priceChart = new Chart(ctx, {
         type: 'line',
@@ -115,27 +323,30 @@ function updateChart(data) {
                 {
                     label: 'Min Price',
                     data: minPrices,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#0077BB',
+                    backgroundColor: 'rgba(0, 119, 187, 0.1)',
+                    borderWidth: 2.5,
+                    borderDash: [],
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Median Price',
                     data: medianPrices,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#EE7733',
+                    backgroundColor: 'rgba(238, 119, 51, 0.1)',
+                    borderWidth: 2.5,
+                    borderDash: [8, 4],
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Max Price',
                     data: maxPrices,
-                    borderColor: '#ef4444',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#CC3311',
+                    backgroundColor: 'rgba(204, 51, 17, 0.1)',
+                    borderWidth: 2.5,
+                    borderDash: [2, 3],
                     tension: 0.4,
                     fill: false
                 }
@@ -147,12 +358,23 @@ function updateChart(data) {
             plugins: {
                 legend: {
                     labels: {
-                        color: '#f1f5f9'
+                        color: getChartColors().text,
+                        font: {
+                            size: 13,
+                            weight: 500
+                        },
+                        padding: 15
                     }
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
+                    backgroundColor: getChartColors().tooltipBg,
+                    titleColor: getChartColors().tooltipTitle,
+                    bodyColor: getChartColors().tooltipBody,
+                    borderColor: getChartColors().tooltipBorder,
+                    borderWidth: 1,
+                    padding: 12,
                     callbacks: {
                         label: function(context) {
                             return `${context.dataset.label}: $${context.parsed.y}/GPU`;
@@ -163,21 +385,50 @@ function updateChart(data) {
             scales: {
                 x: {
                     grid: {
-                        color: '#334155'
+                        color: getChartColors().grid,
+                        drawBorder: false
                     },
                     ticks: {
-                        color: '#94a3b8'
+                        color: getChartColors().text,
+                        font: {
+                            size: 12
+                        }
                     }
                 },
                 y: {
                     grid: {
-                        color: '#334155'
+                        color: getChartColors().grid,
+                        drawBorder: false
                     },
                     ticks: {
-                        color: '#94a3b8',
+                        color: getChartColors().text,
+                        font: {
+                            size: 12
+                        },
                         callback: function(value) {
-                            return '$' + value;
+                            return '$' + value.toFixed(2);
                         }
+                    }
+                }
+            },
+            onClick: (_event, activeElements) => {
+                if (activeElements.length > 0 && processedChartData) {
+                    const dataIndex = activeElements[0].index;
+
+                    // Get the selected datapoint
+                    const selectedData = processedChartData[dataIndex];
+
+                    // Update stats with selected datapoint
+                    // For aggregated data, use the original middle datapoint for full details
+                    const datapointToShow = selectedData.originalData || selectedData;
+                    updateStats(allData, datapointToShow);
+
+                    // Also update tables if they need specific datapoint
+                    if (datapointToShow.by_config) {
+                        updateBestDealsTable([datapointToShow]);
+                    }
+                    if (datapointToShow.by_provider) {
+                        updateProviderTable([datapointToShow]);
                     }
                 }
             }
@@ -254,8 +505,8 @@ function updateProviderTable(data) {
         <tr>
             <td>${name}</td>
             <td>${stats.count}</td>
-            <td>$${stats.min}</td>
-            <td>$${stats.avg}</td>
+            <td>$${stats.min.toFixed(2)}</td>
+            <td>$${stats.avg.toFixed(2)}</td>
         </tr>
     `).join('');
 

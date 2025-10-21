@@ -3,16 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPU Price Tracker</title>
+    <title>Compute Price Tracker</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        // Apply theme before page renders to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🖥️ GPU Price Tracker</h1>
-            <p class="subtitle">Track NeoCloud GPU prices over time</p>
-            <p class="last-updated">Last updated: <span id="lastUpdated">Loading...</span></p>
+            <div class="header-content">
+                <div>
+                    <h1>Tensor Economics</h1>
+                    <p class="subtitle">Compute Price Tracker</p>
+                </div>
+                <button id="darkModeToggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
         </header>
 
         <!-- GPU Type Selector -->
@@ -27,32 +44,48 @@
         </div>
 
         <!-- Current Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Minimum Price</h3>
-                <p class="stat-value" id="minPrice">-</p>
-                <p class="stat-label">per GPU/hour</p>
+        <div class="stats-section">
+            <div class="stats-timestamp">
+                Showing data for: <span id="lastUpdated">Loading...</span>
             </div>
-            <div class="stat-card">
-                <h3>Median Price</h3>
-                <p class="stat-value" id="medianPrice">-</p>
-                <p class="stat-label">per GPU/hour</p>
-            </div>
-            <div class="stat-card">
-                <h3>Available</h3>
-                <p class="stat-value" id="available">-</p>
-                <p class="stat-label">configurations</p>
-            </div>
-            <div class="stat-card">
-                <h3>Total Configs</h3>
-                <p class="stat-value" id="totalConfigs">-</p>
-                <p class="stat-label">in market</p>
+            <div class="stats-grid">
+                <div class="stat-card" title="The lowest price per GPU/hour across all available configurations. This represents the best deal you can currently get.">
+                    <h3>Minimum Price</h3>
+                    <p class="stat-value" id="minPrice">-</p>
+                    <p class="stat-label">per GPU/hour</p>
+                </div>
+                <div class="stat-card" title="The median (middle) price per GPU/hour across all configurations. Half of the offerings cost less than this, half cost more. This gives a better sense of typical pricing than the average.">
+                    <h3>Median Price</h3>
+                    <p class="stat-value" id="medianPrice">-</p>
+                    <p class="stat-label">per GPU/hour</p>
+                </div>
+                <div class="stat-card" title="Total number of unique server configurations available across all providers. Each configuration represents a different GPU count, provider, or location.">
+                    <h3>Available</h3>
+                    <p class="stat-value" id="available">-</p>
+                    <p class="stat-label">configurations</p>
+                </div>
             </div>
         </div>
 
         <!-- Price Trend Chart -->
         <div class="chart-container">
-            <h2>Price Trend (Last 7 Days)</h2>
+            <div class="chart-header">
+                <h2>Price Trend</h2>
+                <div class="chart-controls">
+                    <div class="time-range-selector">
+                        <button class="time-btn" data-days="1" title="Raw data points every ~4 hours">24h</button>
+                        <button class="time-btn" data-days="3" title="Raw data points every ~4 hours">3d</button>
+                        <button class="time-btn active" data-days="7" title="Raw data points every ~4 hours">7d</button>
+                        <button class="time-btn" data-days="14" title="Daily averages (min, median, max averaged per day)">14d</button>
+                        <button class="time-btn" data-days="30" title="Daily averages (min, median, max averaged per day)">30d</button>
+                        <button class="time-btn" data-days="all" title="Weekly averages (min, median, max averaged per week)">All</button>
+                    </div>
+                    <label class="smooth-toggle" title="Apply exponential moving average (EMA) to emphasize price trends and reduce noise">
+                        <input type="checkbox" id="smoothToggle">
+                        <span>Smooth trend</span>
+                    </label>
+                </div>
+            </div>
             <div class="chart-wrapper">
                 <canvas id="priceChart"></canvas>
             </div>
@@ -101,9 +134,11 @@
         </div>
 
         <footer>
-            <p>Data sourced from <a href="https://primeintellect.ai" target="_blank">Prime Intellect</a> |
-               <a href="https://github.com/tugot17/gpu-price-tracker" target="_blank">View on GitHub</a> |
-               Updated every 4 hours</p>
+            <p>
+                Read more on <a href="https://www.tensoreconomics.com/" target="_blank">Tensor Economics</a> •
+                Full data on <a href="https://github.com/tugot17/gpu-price-tracker" target="_blank">GitHub</a> •
+                Sourced from <a href="https://primeintellect.ai" target="_blank">PI</a>
+            </p>
         </footer>
     </div>
 
