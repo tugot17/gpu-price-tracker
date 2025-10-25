@@ -12,8 +12,8 @@ const CHART_CONSTANTS = {
     },
     LINE_STYLES: {
         MIN: [],           // Solid
-        MEDIAN: [8, 4],    // Dashed
-        MAX: [2, 3]        // Dotted
+        MEDIAN: [12, 6],   // Long dashes (subtle, elegant)
+        MAX: [4, 4]        // Short dashes (distinct from median)
     }
 };
 
