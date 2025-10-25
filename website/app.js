@@ -1,5 +1,51 @@
 // Configuration
 const DATA_BASE_URL = '../data'; // Adjust for GitHub Pages
+
+// Chart styling constants
+const CHART_CONSTANTS = {
+    EMA_ALPHA: 0.3,
+    LINE_WIDTH: 2.5,
+    COLORS: {
+        MIN: { border: '#0077BB', background: 'rgba(0, 119, 187, 0.1)' },
+        MEDIAN: { border: '#EE7733', background: 'rgba(238, 119, 51, 0.1)' },
+        MAX: { border: '#CC3311', background: 'rgba(204, 51, 17, 0.1)' }
+    },
+    LINE_STYLES: {
+        MIN: [],           // Solid
+        MEDIAN: [8, 4],    // Dashed
+        MAX: [2, 3]        // Dotted
+    }
+};
+
+// Time range configuration
+const TIME_RANGE_CONFIG = {
+    1: {
+        aggregation: null,
+        labelFormat: (date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    },
+    3: {
+        aggregation: null,
+        labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' })
+    },
+    7: {
+        aggregation: 'hour',
+        labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' })
+    },
+    14: {
+        aggregation: 'day',
+        labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    },
+    30: {
+        aggregation: 'day',
+        labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    },
+    'all': {
+        aggregation: 'week',
+        labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    }
+};
+
+// Application state
 let currentGPU = 'H100_80GB_SXM5';
 let currentTimeRange = 7; // days
 let smoothEnabled = false;
@@ -32,19 +78,10 @@ function initializeDarkMode() {
         themeIcon.textContent = willBeDark ? '☀️' : '🌙';
         localStorage.setItem('theme', willBeDark ? 'dark' : 'light');
 
-        // Update chart colors
+        // Update chart with new theme colors
         if (priceChart) {
-            const colors = getChartColors();
-            priceChart.options.scales.x.grid.color = colors.grid;
-            priceChart.options.scales.x.ticks.color = colors.text;
-            priceChart.options.scales.y.grid.color = colors.grid;
-            priceChart.options.scales.y.ticks.color = colors.text;
-            priceChart.options.plugins.legend.labels.color = colors.text;
-            priceChart.options.plugins.tooltip.backgroundColor = colors.tooltipBg;
-            priceChart.options.plugins.tooltip.titleColor = colors.tooltipTitle;
-            priceChart.options.plugins.tooltip.bodyColor = colors.tooltipBody;
-            priceChart.options.plugins.tooltip.borderColor = colors.tooltipBorder;
-            priceChart.update();
+            priceChart.options = createChartOptions();
+            priceChart.update('none'); // 'none' mode = no animation for instant update
         }
     });
 }
@@ -166,7 +203,7 @@ function updateStats(data, datapoint = null) {
     }
 }
 
-// Helper: Aggregate data by period (day or week)
+// Helper: Aggregate data by period (hour, day, or week)
 function aggregateData(data, period) {
     const grouped = {};
 
@@ -174,7 +211,10 @@ function aggregateData(data, period) {
         const date = new Date(d.timestamp);
         let key;
 
-        if (period === 'day') {
+        if (period === 'hour') {
+            // Group by hour
+            key = date.toISOString().substring(0, 13); // YYYY-MM-DDTHH
+        } else if (period === 'day') {
             // Group by calendar day
             key = date.toISOString().split('T')[0];
         } else if (period === 'week') {
@@ -216,8 +256,90 @@ function aggregateData(data, period) {
     });
 }
 
+// Helper: Create chart options with current theme colors
+function createChartOptions() {
+    const colors = getChartColors();
+
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    color: colors.text,
+                    font: {
+                        size: 13,
+                        weight: 500
+                    },
+                    padding: 15
+                }
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: colors.tooltipBg,
+                titleColor: colors.tooltipTitle,
+                bodyColor: colors.tooltipBody,
+                borderColor: colors.tooltipBorder,
+                borderWidth: 1,
+                padding: 12,
+                callbacks: {
+                    label: function(context) {
+                        return `${context.dataset.label}: $${context.parsed.y.toFixed(2)}/GPU`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    color: colors.grid,
+                    drawBorder: false
+                },
+                ticks: {
+                    color: colors.text,
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            y: {
+                grid: {
+                    color: colors.grid,
+                    drawBorder: false
+                },
+                ticks: {
+                    color: colors.text,
+                    font: {
+                        size: 12
+                    },
+                    callback: function(value) {
+                        return '$' + value.toFixed(2);
+                    }
+                }
+            }
+        },
+        onClick: (_event, activeElements) => {
+            if (activeElements.length > 0 && processedChartData) {
+                const dataIndex = activeElements[0].index;
+                const selectedData = processedChartData[dataIndex];
+                const datapointToShow = selectedData.originalData || selectedData;
+
+                updateStats(allData, datapointToShow);
+
+                if (datapointToShow.by_config) {
+                    updateBestDealsTable([datapointToShow]);
+                }
+                if (datapointToShow.by_provider) {
+                    updateProviderTable([datapointToShow]);
+                }
+            }
+        }
+    };
+}
+
 // Helper: Apply EMA smoothing
-function applyEMA(data, alpha = 0.3) {
+function applyEMA(data, alpha) {
     if (data.length === 0) return data;
 
     // Preserve original data reference for first element
@@ -258,41 +380,23 @@ function updateChart(data) {
         });
     }
 
-    // Apply aggregation for longer periods (reduces noise)
+    // Apply aggregation based on time range config
+    const rangeConfig = TIME_RANGE_CONFIG[currentTimeRange];
     let processedData = filteredData;
-    if (currentTimeRange === 14 || currentTimeRange === 30) {
-        // 14-30 days: aggregate by day
-        processedData = aggregateData(filteredData, 'day');
-    } else if (currentTimeRange === 'all') {
-        // All: aggregate by week
-        processedData = aggregateData(filteredData, 'week');
+
+    if (rangeConfig.aggregation) {
+        processedData = aggregateData(filteredData, rangeConfig.aggregation);
     }
 
     // Apply EMA smoothing if enabled
     if (smoothEnabled) {
-        processedData = applyEMA(processedData, 0.3);
+        processedData = applyEMA(processedData, CHART_CONSTANTS.EMA_ALPHA);
     }
 
-    // Smart date formatting based on time range
+    // Format labels based on time range config
     const labels = processedData.map(d => {
         const date = new Date(d.timestamp);
-
-        // For 24h: show time only
-        if (currentTimeRange === 1) {
-            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        }
-        // For 3-7 days: show date and time
-        else if (currentTimeRange <= 7) {
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' });
-        }
-        // For 14-30 days: show date only
-        else if (currentTimeRange <= 30) {
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-        // For longer periods: show month and year
-        else {
-            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        }
+        return rangeConfig.labelFormat(date);
     });
 
     const minPrices = processedData.map(d => d.price_stats.min);
@@ -323,116 +427,36 @@ function updateChart(data) {
                 {
                     label: 'Min Price',
                     data: minPrices,
-                    borderColor: '#0077BB',
-                    backgroundColor: 'rgba(0, 119, 187, 0.1)',
-                    borderWidth: 2.5,
-                    borderDash: [],
+                    borderColor: CHART_CONSTANTS.COLORS.MIN.border,
+                    backgroundColor: CHART_CONSTANTS.COLORS.MIN.background,
+                    borderWidth: CHART_CONSTANTS.LINE_WIDTH,
+                    borderDash: CHART_CONSTANTS.LINE_STYLES.MIN,
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Median Price',
                     data: medianPrices,
-                    borderColor: '#EE7733',
-                    backgroundColor: 'rgba(238, 119, 51, 0.1)',
-                    borderWidth: 2.5,
-                    borderDash: [8, 4],
+                    borderColor: CHART_CONSTANTS.COLORS.MEDIAN.border,
+                    backgroundColor: CHART_CONSTANTS.COLORS.MEDIAN.background,
+                    borderWidth: CHART_CONSTANTS.LINE_WIDTH,
+                    borderDash: CHART_CONSTANTS.LINE_STYLES.MEDIAN,
                     tension: 0.4,
                     fill: false
                 },
                 {
                     label: 'Max Price',
                     data: maxPrices,
-                    borderColor: '#CC3311',
-                    backgroundColor: 'rgba(204, 51, 17, 0.1)',
-                    borderWidth: 2.5,
-                    borderDash: [2, 3],
+                    borderColor: CHART_CONSTANTS.COLORS.MAX.border,
+                    backgroundColor: CHART_CONSTANTS.COLORS.MAX.background,
+                    borderWidth: CHART_CONSTANTS.LINE_WIDTH,
+                    borderDash: CHART_CONSTANTS.LINE_STYLES.MAX,
                     tension: 0.4,
                     fill: false
                 }
             ]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: {
-                        color: getChartColors().text,
-                        font: {
-                            size: 13,
-                            weight: 500
-                        },
-                        padding: 15
-                    }
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: getChartColors().tooltipBg,
-                    titleColor: getChartColors().tooltipTitle,
-                    bodyColor: getChartColors().tooltipBody,
-                    borderColor: getChartColors().tooltipBorder,
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: $${context.parsed.y}/GPU`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: getChartColors().grid,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: getChartColors().text,
-                        font: {
-                            size: 12
-                        }
-                    }
-                },
-                y: {
-                    grid: {
-                        color: getChartColors().grid,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: getChartColors().text,
-                        font: {
-                            size: 12
-                        },
-                        callback: function(value) {
-                            return '$' + value.toFixed(2);
-                        }
-                    }
-                }
-            },
-            onClick: (_event, activeElements) => {
-                if (activeElements.length > 0 && processedChartData) {
-                    const dataIndex = activeElements[0].index;
-
-                    // Get the selected datapoint
-                    const selectedData = processedChartData[dataIndex];
-
-                    // Update stats with selected datapoint
-                    // For aggregated data, use the original middle datapoint for full details
-                    const datapointToShow = selectedData.originalData || selectedData;
-                    updateStats(allData, datapointToShow);
-
-                    // Also update tables if they need specific datapoint
-                    if (datapointToShow.by_config) {
-                        updateBestDealsTable([datapointToShow]);
-                    }
-                    if (datapointToShow.by_provider) {
-                        updateProviderTable([datapointToShow]);
-                    }
-                }
-            }
-        }
+        options: createChartOptions()
     });
 }
 
@@ -514,10 +538,11 @@ function updateProviderTable(data) {
 }
 
 function showError(message) {
-    // Simple error display
     const container = document.querySelector('.container');
+    if (!container) return;
+
     const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = 'background: #ef4444; color: white; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;';
+    errorDiv.className = 'error-message';
     errorDiv.textContent = message;
     container.insertBefore(errorDiv, container.firstChild);
 }

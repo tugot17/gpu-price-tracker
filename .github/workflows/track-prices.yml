@@ -2,8 +2,8 @@ name: Track GPU Prices
 
 on:
   schedule:
-    # Run every 4 hours at :05 past the hour
-    - cron: '5 */4 * * *'
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
