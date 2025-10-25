@@ -9,7 +9,7 @@ Providing transparency and open data for datacenter GPU compute markets. Built f
 
 🌐 **[View Live Dashboard](https://tugot17.github.io/gpu-price-tracker/website/)**
 
-Price trends, best deals, and provider comparisons updated every 4 hours. Data sourced from [Prime Intellect](https://primeintellect.ai)'s aggregated marketplace.
+Price trends, best deals, and provider comparisons updated every 30 minutes. Data sourced from [Prime Intellect](https://primeintellect.ai)'s aggregated marketplace.
 
 ## Setup
 
@@ -72,7 +72,7 @@ The script monitors these GPUs:
 - GH200 96GB / 480GB / 624GB
 - A100 80GB (SXM4 and PCIe tracked separately)
 
-For each snapshot (every 4 hours), it calculates:
+For each snapshot (every 30 minutes), it calculates:
 - Price percentiles (min, p10, p25, median, p75, p90, max)
 - Availability by stock status
 - Breakdown by provider
