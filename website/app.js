@@ -24,11 +24,11 @@ const TIME_RANGE_CONFIG = {
         labelFormat: (date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     },
     3: {
-        aggregation: null,
+        aggregation: '90min',
         labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' })
     },
     7: {
-        aggregation: 'hour',
+        aggregation: '4hour',
         labelFormat: (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' })
     },
     14: {
@@ -203,7 +203,7 @@ function updateStats(data, datapoint = null) {
     }
 }
 
-// Helper: Aggregate data by period (hour, day, or week)
+// Helper: Aggregate data by period (hour, 90min, 4hour, day, or week)
 function aggregateData(data, period) {
     const grouped = {};
 
@@ -212,8 +212,24 @@ function aggregateData(data, period) {
         let key;
 
         if (period === 'hour') {
-            // Group by hour
-            key = date.toISOString().substring(0, 13); // YYYY-MM-DDTHH
+            // Group by hour (round down to start of hour)
+            const blockDate = new Date(date);
+            blockDate.setUTCMinutes(0, 0, 0);
+            key = blockDate.toISOString();
+        } else if (period === '90min') {
+            // Group by 90-minute blocks (00:00, 01:30, 03:00, 04:30, etc.)
+            const totalMinutes = date.getUTCHours() * 60 + date.getUTCMinutes();
+            const block = Math.floor(totalMinutes / 90) * 90;
+            const blockDate = new Date(date);
+            blockDate.setUTCHours(Math.floor(block / 60), block % 60, 0, 0);
+            key = blockDate.toISOString();
+        } else if (period === '4hour') {
+            // Group by 4-hour blocks (00:00, 04:00, 08:00, 12:00, 16:00, 20:00)
+            const hour = date.getUTCHours();
+            const block = Math.floor(hour / 4) * 4;
+            const blockDate = new Date(date);
+            blockDate.setUTCHours(block, 0, 0, 0);
+            key = blockDate.toISOString();
         } else if (period === 'day') {
             // Group by calendar day
             key = date.toISOString().split('T')[0];
@@ -299,8 +315,13 @@ function createChartOptions() {
                 ticks: {
                     color: colors.text,
                     font: {
-                        size: 12
-                    }
+                        size: 11
+                    },
+                    maxRotation: 45,
+                    minRotation: 45,
+                    autoSkip: true,
+                    autoSkipPadding: 50,
+                    maxTicksLimit: 15
                 }
             },
             y: {

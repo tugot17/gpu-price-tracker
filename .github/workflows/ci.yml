@@ -35,13 +35,19 @@ jobs:
 
       - name: Check for large files
         run: |
-          echo "Checking for files larger than 1MB..."
-          if find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*" | grep -q .; then
+          echo "Checking for files larger than 1MB (excluding summary files)..."
+          if find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*" -not -path "./data/summary/*" | grep -q .; then
             echo "❌ Large files detected:"
-            find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*"
+            find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" -not -path "./data/full_snapshots/*" -not -path "./data/summary/*"
             exit 1
           fi
-          echo "✅ No large files found"
+          echo "Checking summary files are under 5MB..."
+          if find ./data/summary -type f -size +5M 2>/dev/null | grep -q .; then
+            echo "❌ Summary files larger than 5MB detected:"
+            find ./data/summary -type f -size +5M 2>/dev/null
+            exit 1
+          fi
+          echo "✅ No problematic large files found"
 
       - name: Check for debug artifacts
         run: |
